@@ -18,8 +18,6 @@ export async function handler(event: S3Event) {
         Key: bucketKey,
       };
 
-      console.log(params);
-
       const $object = s3.getObject(params).createReadStream();
       const md5 = await genMd5($object);
 
