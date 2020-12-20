@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Tags:
+      Application: serverless-web-app
+
+Resources:
+  NoodlesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: noodles-bucket
+
+  NoodlesMd5Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: noodles-md5
+      KeySchema:
+        - AttributeName: md5
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: md5
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  NoodlesGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+
+  # S3 Trigger Fn
+  CalcHashFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/deploy.zip
+      Handler: dist/fn/calc-md5.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref NoodlesMd5Table
+        - DynamoDBWritePolicy:
+            TableName: !Ref NoodlesMd5Table
+        - Statement:
+          - Sid: S3GetObjectPolicy
+            Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: arn:aws:s3:::*
+      Environment:
+        Variables:
+          NOODLES_MD5_TABLE: !Ref NoodlesMd5Table
+          NOODLES_BUCKET: noodles-bucket
+
+  # Api Fn
+  SendEmailApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/deploy.zip
+      Handler: dist/api/send-email.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref NoodlesMd5Table
+      Environment:
+        Variables:
+          NOODLES_MD5_TABLE: !Ref NoodlesMd5Table
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /email
+            Method: POST
+            RestApiId: !Ref NoodlesGateway
+
+  GenTokenApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/deploy.zip
+      Handler: dist/api/gen-token.handler
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /token
+            Method: GET
+            RestApiId: !Ref NoodlesGateway
