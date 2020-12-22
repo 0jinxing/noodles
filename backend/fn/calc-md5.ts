@@ -7,7 +7,7 @@ import { Md5Model } from "../model/md5.model";
 import { mapper } from "../model";
 
 const BUCKET = process.env.NOODLES_BUCKET!;
-const s3 = new CaptureAWS.S3();
+const s3client = new CaptureAWS.S3();
 
 export async function handler(event: S3Event) {
   const md5List = await Promise.all(
@@ -18,7 +18,7 @@ export async function handler(event: S3Event) {
         Key: bucketKey,
       };
 
-      const $object = s3.getObject(params).createReadStream();
+      const $object = s3client.getObject(params).createReadStream();
       const md5 = await genMd5($object);
 
       return new Md5Model(md5, bucketKey, BUCKET);

@@ -45,15 +45,14 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref NoodlesMd5Table
         - Statement:
-          - Sid: S3GetObjectPolicy
-            Effect: Allow
-            Action:
-              - s3:GetObject
-            Resource: arn:aws:s3:::*
+            - Sid: S3GetObjectPolicy
+              Effect: Allow
+              Action: s3:GetObject
+              Resource: arn:aws:s3:::*
       Environment:
         Variables:
           NOODLES_MD5_TABLE: !Ref NoodlesMd5Table
-          NOODLES_BUCKET: noodles-bucket
+          NOODLES_BUCKET: !Ref NoodlesBucket
 
   # Api Fn
   SendEmailApi:
@@ -87,3 +86,41 @@ Resources:
             Path: /token
             Method: GET
             RestApiId: !Ref NoodlesGateway
+
+  # Bucket Notification
+  NotificationFnRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+        - PolicyName: S3BucketNotificationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowBucketNotification
+                Effect: Allow
+                Action: s3:PutBucketNotification
+                Resource: arn:aws:s3:::*
+
+  NotificationFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: dist/custom/bucket-notification.handler
+      Runtime: nodejs12.x
+      Role: !GetAtt NotificationFnRole.Arn
+
+  ApplyNotification:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt NotificationFn.Arn
+      bucket: !Ref NoodlesBucket
+      fnArn: !GetAtt CalcHashFn.Arn
