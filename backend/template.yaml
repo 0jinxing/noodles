@@ -11,7 +11,7 @@ Resources:
   NoodlesBucket:
     Type: AWS::S3::Bucket
     Properties:
-      AccessControl: PublicRead
+      AccessControl: Private
       BucketName: noodles-bucket
 
   NoodlesMd5Table:
@@ -111,11 +111,19 @@ Resources:
                 Action: s3:PutBucketNotification
                 Resource: arn:aws:s3:::*
 
+  TestS3BucketEventPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      SourceAccount: !Ref AWS::AccountId
+      FunctionName: !Ref CalcHashFn
+      SourceArn: !GetAtt NoodlesBucket.Arn
+      Principal: s3.amazonaws.com
+
   NotificationFn:
-    Type: AWS::Lambda::Function
+    Type: AWS::Serverless::Function
     Properties:
       Handler: dist/custom/bucket-notification.handler
-      Runtime: nodejs12.x
       Role: !GetAtt NotificationFnRole.Arn
 
   ApplyNotification:
