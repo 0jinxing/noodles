@@ -1,134 +1,147 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
+Transform: "AWS::Serverless-2016-10-31"
 
 Globals:
   Function:
-    Runtime: nodejs12.x
+    Runtime: "nodejs12.x"
     Tags:
-      Application: serverless-web-app
+      Application: "serverless-web-app"
+    Environment:
+      Variables:
+        NOODLES_MD5_TABLE: !Ref "NoodlesMd5Table"
+        NOODLES_BUCKET: !Ref "NoodlesBucket"
 
 Resources:
   NoodlesBucket:
-    Type: AWS::S3::Bucket
+    Type: "AWS::S3::Bucket"
     Properties:
-      AccessControl: Private
-      BucketName: noodles-bucket
+      AccessControl: "Private"
+      BucketName: "noodles-bucket"
 
   NoodlesMd5Table:
-    Type: AWS::DynamoDB::Table
+    Type: "AWS::DynamoDB::Table"
     Properties:
-      TableName: noodles-md5
+      TableName: "noodles-md5"
       KeySchema:
-        - AttributeName: md5
-          KeyType: HASH
+        - AttributeName: "md5"
+          KeyType: "HASH"
       AttributeDefinitions:
-        - AttributeName: md5
-          AttributeType: S
+        - AttributeName: "md5"
+          AttributeType: "S"
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
   NoodlesGateway:
-    Type: AWS::Serverless::Api
+    Type: "AWS::Serverless::Api"
     Properties:
-      StageName: prod
+      StageName: "prod"
 
   # S3 Trigger Fn
   CalcHashFn:
-    Type: AWS::Serverless::Function
+    Type: "AWS::Serverless::Function"
     Properties:
-      CodeUri: dist/deploy.zip
-      Handler: dist/fn/calc-md5.handler
+      CodeUri: "dist/deploy.zip"
+      Handler: "dist/fn/calc-md5.handler"
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref NoodlesMd5Table
+            TableName: !Ref "NoodlesMd5Table"
         - DynamoDBWritePolicy:
-            TableName: !Ref NoodlesMd5Table
+            TableName: !Ref "NoodlesMd5Table"
         - Statement:
-            - Sid: S3GetObjectPolicy
-              Effect: Allow
-              Action: s3:GetObject
-              Resource: arn:aws:s3:::*
-      Environment:
-        Variables:
-          NOODLES_MD5_TABLE: !Ref NoodlesMd5Table
-          NOODLES_BUCKET: !Ref NoodlesBucket
+            - Sid: "S3GetObjectPolicy"
+              Effect: "Allow"
+              Action: "s3:GetObject"
+              Resource: "arn:aws:s3:::*"
 
   # Api Fn
   SendEmailApi:
-    Type: AWS::Serverless::Function
+    Type: "AWS::Serverless::Function"
     Properties:
-      CodeUri: dist/deploy.zip
-      Handler: dist/api/send-email.handler
+      CodeUri: "dist/deploy.zip"
+      Handler: "dist/api/send-email.handler"
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref NoodlesMd5Table
-      Environment:
-        Variables:
-          NOODLES_MD5_TABLE: !Ref NoodlesMd5Table
+            TableName: !Ref "NoodlesMd5Table"
       Events:
         ApiEvent:
-          Type: Api
+          Type: "Api"
           Properties:
-            Path: /email
-            Method: POST
-            RestApiId: !Ref NoodlesGateway
+            Path: "/email"
+            Method: "POST"
+            RestApiId: !Ref "NoodlesGateway"
 
   GenTokenApi:
-    Type: AWS::Serverless::Function
+    Type: "AWS::Serverless::Function"
     Properties:
-      CodeUri: dist/deploy.zip
-      Handler: dist/api/gen-token.handler
+      CodeUri: "dist/deploy.zip"
+      Handler: "dist/api/gen-token.handler"
       Events:
         ApiEvent:
-          Type: Api
+          Type: "Api"
           Properties:
-            Path: /token
-            Method: GET
-            RestApiId: !Ref NoodlesGateway
+            Path: "/token"
+            Method: "GET"
+            RestApiId: !Ref "NoodlesGateway"
+
+  QueryMd5Api:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri: "dist/deploy.zip"
+      Handler: "dist/api/query-md5.handler"
+      Events:
+        ApiEvent:
+          Type: "Api"
+          Properties:
+            Path: "/md5"
+            Method: "GET"
+            RestApiId: !Ref "NoodlesGateway"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref "NoodlesMd5Table"
 
   # Bucket Notification
   NotificationFnRole:
-    Type: AWS::IAM::Role
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
+          - Effect: "Allow"
             Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: /
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: "/"
       Policies:
-        - PolicyName: S3BucketNotificationPolicy
+        - PolicyName: "S3BucketNotificationPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: AllowBucketNotification
-                Effect: Allow
-                Action: s3:PutBucketNotification
-                Resource: arn:aws:s3:::*
+              - Sid: "AllowBucketNotification"
+                Effect: "Allow"
+                Action: "s3:PutBucketNotification"
+                Resource: "arn:aws:s3:::*"
 
   TestS3BucketEventPermission:
-    Type: AWS::Lambda::Permission
+    Type: "AWS::Lambda::Permission"
     Properties:
-      Action: lambda:invokeFunction
-      SourceAccount: !Ref AWS::AccountId
-      FunctionName: !Ref CalcHashFn
-      SourceArn: !GetAtt NoodlesBucket.Arn
-      Principal: s3.amazonaws.com
+      Action: "lambda:invokeFunction"
+      SourceAccount: !Ref "AWS::AccountId"
+      FunctionName: !Ref "CalcHashFn"
+      SourceArn: !GetAtt "NoodlesBucket.Arn"
+      Principal: "s3.amazonaws.com"
 
   NotificationFn:
-    Type: AWS::Serverless::Function
+    Type: "AWS::Serverless::Function"
     Properties:
-      Handler: dist/custom/bucket-notification.handler
-      Role: !GetAtt NotificationFnRole.Arn
+      Handler: "dist/custom/bucket-notification.handler"
+      Role: !GetAtt "NotificationFnRole.Arn"
 
   ApplyNotification:
-    Type: AWS::CloudFormation::CustomResource
+    Type: "AWS::CloudFormation::CustomResource"
     Properties:
-      ServiceToken: !GetAtt NotificationFn.Arn
-      bucket: !Ref NoodlesBucket
-      fnArn: !GetAtt CalcHashFn.Arn
+      ServiceToken: !GetAtt "NotificationFn.Arn"
+      bucket: !Ref "NoodlesBucket"
+      fnArn: !GetAtt "CalcHashFn.Arn"
