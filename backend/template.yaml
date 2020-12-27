@@ -49,8 +49,7 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref "NoodlesMd5Table"
         - Statement:
-            - Sid: "S3GetObjectPolicy"
-              Effect: "Allow"
+            - Effect: "Allow"
               Action: "s3:GetObject"
               Resource: "arn:aws:s3:::*"
 
@@ -83,6 +82,9 @@ Resources:
             Path: "/token"
             Method: "GET"
             RestApiId: !Ref "NoodlesGateway"
+      Environment:
+        Variables:
+          ASSUME_ROLE_ARN: !GetAtt "STSAssumeRole.Arn"
 
   QueryMd5Api:
     Type: "AWS::Serverless::Function"
@@ -99,6 +101,25 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref "NoodlesMd5Table"
+
+  STSAssumeRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "S3PutObjectPolicie"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "s3:PutObject"
+                Resource: "arn:aws:s3:::*"
 
   # Bucket Notification
   NotificationFnRole:
@@ -119,12 +140,11 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: "AllowBucketNotification"
-                Effect: "Allow"
+              - Effect: "Allow"
                 Action: "s3:PutBucketNotification"
                 Resource: "arn:aws:s3:::*"
 
-  TestS3BucketEventPermission:
+  NotificationFnPermission:
     Type: "AWS::Lambda::Permission"
     Properties:
       Action: "lambda:invokeFunction"
@@ -139,7 +159,7 @@ Resources:
       Handler: "dist/custom/bucket-notification.handler"
       Role: !GetAtt "NotificationFnRole.Arn"
 
-  ApplyNotification:
+  NotificationCustom:
     Type: "AWS::CloudFormation::CustomResource"
     Properties:
       ServiceToken: !GetAtt "NotificationFn.Arn"
