@@ -1,8 +1,8 @@
 import { ItemNotFoundException } from "@aws/dynamodb-data-mapper";
 import { APIGatewayEvent } from "aws-lambda";
-import { mapper } from "../model";
-import { Md5Model } from "../model/md5.model";
-import { resp } from "../utils/resp";
+import { mapper } from "../common/model";
+import { Md5Model } from "../common/model/md5.model";
+import { resp } from "../common/utils/resp";
 
 type QSParams = {
   md5?: string;

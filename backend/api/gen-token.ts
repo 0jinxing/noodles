@@ -1,5 +1,5 @@
-import { resp } from "../utils/resp";
-import { CaptureAWS } from "../xray";
+import { resp } from "../common/utils/resp";
+import { CaptureAWS } from "../common/xray";
 
 const ASSUME_ROLE_ARN: string = process.env.ASSUME_ROLE_ARN!;
 

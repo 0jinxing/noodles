@@ -2,9 +2,9 @@ import crypto, { BinaryLike } from "crypto";
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
 
-import { CaptureAWS } from "../xray";
-import { Md5Model } from "../model/md5.model";
-import { mapper } from "../model";
+import { CaptureAWS } from "../common/xray";
+import { Md5Model } from "../common/model/md5.model";
+import { mapper } from "../common/model";
 
 const BUCKET = process.env.NOODLES_BUCKET!;
 const s3Client = new CaptureAWS.S3();
