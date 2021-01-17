@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
-import { createBucket } from './resources/bucket';
-import { createDynamoDb } from './resources/dynamodb';
+import { md5Bucket } from './resources/md5-bucket';
+import { md5Db } from './resources/md5-db';
+import { restApi } from './resources/rest-api';
 
 class NoodlesStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    createDynamoDb(this);
-    createBucket(this);
+
+    restApi(this);
+    md5Db(this);
+    md5Bucket(this);
   }
 }
 
